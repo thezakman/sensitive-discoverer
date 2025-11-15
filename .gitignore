@@ -50,5 +50,5 @@ src/build/
 *.lst
 .vscode
 todo
-src/main/java/com/cys4/sensitivediscoverer/tests
+src/main/java/com/tzm/supafinder/tests
 /tests

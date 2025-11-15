@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.cys4.sensitivediscoverer</groupId>
-    <artifactId>sensitivediscoverer</artifactId>
-    <version>4.2.0</version>
+    <groupId>com.tzm.supafinder</groupId>
+    <artifactId>supafinder</artifactId>
+    <version>5.0.0</version>
     <dependencies>
         <dependency>
             <groupId>net.portswigger.burp.extensions</groupId>
@@ -46,6 +46,11 @@
             <version>4.2.1</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>2.2</version>
+        </dependency>
     </dependencies>
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -55,7 +60,7 @@
     </properties>
 
     <build>
-        <finalName>SensitiveDiscoverer-${project.version}</finalName>
+        <finalName>SupaFinder-${project.version}</finalName>
         <resources>
             <resource>
                 <directory>
@@ -120,10 +125,10 @@
         </plugins>
     </build>
 
-    <name>Sensitive Discoverer</name>
-    <description>Sensitive Discoverer, a Burp extension to discovers sensitive information inside HTTP messages.
+    <name>SupaFinder</name>
+    <description>SupaFinder, a Burp extension to discovers sensitive information inside HTTP messages.
     </description>
-    <url>https://github.com/CYS4srl/SensitiveDiscoverer</url>
+    <url>https://github.com/TheZakMan/SupaFinder-Burp</url>
     <inceptionYear>2021</inceptionYear>
     <licenses>
         <license>
@@ -133,8 +138,8 @@
         </license>
     </licenses>
     <organization>
-        <name>CYS4</name>
-        <url>https://cys4.com</url>
+        <name>TheZakMan</name>
+        <url>https://thezakman.github.io/</url>
     </organization>
     <repositories>
         <repository>

@@ -2,8 +2,8 @@ package burp;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
-import com.cys4.sensitivediscoverer.MainUI;
-import com.cys4.sensitivediscoverer.utils.Utils;
+import com.tzm.supafinder.MainUI;
+import com.tzm.supafinder.utils.Utils;
 
 public class BurpExtender implements BurpExtension {
     @Override

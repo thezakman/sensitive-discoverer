@@ -26,7 +26,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         draft: true
-        files: target/SensitiveDiscoverer-*
+        files: target/SupaFinder-*
 
     # Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph

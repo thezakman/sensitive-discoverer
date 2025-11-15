@@ -23,4 +23,4 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: extension-build
-        path: target/SensitiveDiscoverer-*.jar
+        path: target/SupaFinder-*.jar

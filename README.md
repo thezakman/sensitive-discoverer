@@ -1,9 +1,9 @@
-# Sensitive Discoverer
+# SupaFinder
 
-> Burp Suite extension to scan for sensitive strings in HTTP messages
+> Burp Suite extension to scan for sensitive strings
 
 <!-- TOC -->
-* [Sensitive Discoverer](#sensitive-discoverer)
+* [SupaFinder](#supafinder)
   * [Introduction](#introduction)
     * [Features](#features)
     * [Screenshots](#screenshots)
@@ -17,7 +17,7 @@
     * [Importing Lists - Advanced](#importing-lists---advanced)
   * [How to compile from source code](#how-to-compile-from-source-code)
     * [Using Maven from CLI](#using-maven-from-cli)
-  * [About us](#about-us)
+  * [About](#about)
   * [References](#references)
 <!-- TOC -->
 
@@ -27,7 +27,7 @@ Burp Suite is a useful tool used to do web application security testing.
 While providing a lot of useful functionalities; when it comes to scanning the content inside HTTP messages against
 many different patterns, this becomes a tedious process.
 
-`Sensitive Discoverer` is a Burp Suite extension that solves this problem.
+`SupaFinder` is a Burp Suite extension that solves this problem.
 With this extension you can automatically and quickly search for sensitive strings in all HTTP messages.
 
 Behind the curtains it all comes down to a list of Regular Expressions that get matched against the content in each HTTP message.
@@ -98,11 +98,55 @@ The extension is available [in the BApp Store](https://portswigger.net/bappstore
 
 ### Manual install
 
-To install the "Sensitive Discoverer" extension manually:
+To install the "SupaFinder" extension manually:
 
-1. Download newest "Sensitive Discoverer" from the [GitHub Release page](https://github.com/CYS4srl/SensitiveDiscoverer/releases).
+1. Download newest "SupaFinder" from the [GitHub Release page](https://github.com/TheZakMan/SupaFinder/releases).
 2. In BurpSuite, go to Extender -> Extension. Click Add. Ensure "Extension type" is set to Java and set the path to the .jar downloaded in step 1.
-3. "Sensitive Discoverer" should appear inside Burp Extension list, and as a new tab in the top menu.
+3. "SupaFinder" should appear inside Burp Extension list, and as a new tab in the top menu.
+
+
+### Compiled Extension
+📦 Como Compilar a Extensão SupaFinder
+
+  Usando Maven (Recomendado)
+
+  Este é um projeto Maven, então a compilação é bem simples:
+
+  mvn clean package
+
+  Detalhes:
+
+  1. Pré-requisitos:
+    - Java 17 ou superior (definido no pom.xml)
+    - Maven instalado
+  2. Comando de compilação:
+  mvn clean package
+  3. Onde encontrar o JAR compilado:
+    - O arquivo .jar compilado será gerado em: /target/
+    - Nome do arquivo: SupaFinder-5.0.0-jar-with-dependencies.jar
+
+  (Baseado na configuração do pom.xml com maven-assembly-plugin que cria um JAR com todas as dependências incluídas)
+
+  O que acontece durante a compilação:
+
+  1. clean: Remove arquivos de builds anteriores
+  2. package:
+    - Compila o código Java
+    - Baixa dependências (Gson, Commons-IO, SnakeYAML, Montoya API)
+    - Executa testes (se houver)
+    - Empacota tudo em um JAR "fat" com todas as dependências
+
+  Carregando no Burp Suite:
+
+  Após compilar:
+  1. Abra Burp Suite
+  2. Vá em Extensions → Installed
+  3. Clique em Add
+  4. Selecione o arquivo JAR em: /target/SupaFinder-5.0.0-jar-with-dependencies.jar
+
+  ---
+  Nota: Como você fez modificações extensivas no código (adicionou YAML support, real-time analysis, etc.), certifique-se de que todas as importações estão corretas antes de compilar.
+   Se houver erros de compilação, posso ajudar a corrigi-los! 🚀
 
 ## Usage
 
@@ -211,11 +255,9 @@ mvn clean package
 
 The compiled extension will be in the "/target" folder.
 
-## About us
+## About
 
-Since 2014 we have been working with our customers to shield their critical business infrastructures. We are qualified security specialists with a strong commitment to addressing our clients' needs, and keeping them secured against today's cyber threats.
-
-Check out [our site](https://cys4.com/) and [our blog](https://blog.cys4.com/) for more information.
+SupaFinder is maintained by TheZakMan, a security researcher focused on web application security and Burp Suite extensions development.
 
 ## References
 
