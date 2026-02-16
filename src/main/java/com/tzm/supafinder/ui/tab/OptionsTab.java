@@ -42,14 +42,17 @@ public class OptionsTab implements ApplicationTab {
     private static final String TAB_NAME = getLocaleString("tab-options");
     private final JPanel panel;
     private final RegexScannerOptions scannerOptions;
+    private final burp.api.montoya.MontoyaApi burpApi;
     private final List<Runnable> resetOptionsListeners = new ArrayList<>();
     private RegexListPanel generalListPanel;
     private RegexListPanel extensionsListPanel;
     private JLabel globalRegexCounterLabel;
     private int yamlPatternsCount = 0; // Track YAML-imported patterns
+    private java.io.File lastImportDirectory = null; // Remember last import directory
 
-    public OptionsTab(RegexScannerOptions scannerOptions) {
+    public OptionsTab(RegexScannerOptions scannerOptions, burp.api.montoya.MontoyaApi burpApi) {
         this.scannerOptions = scannerOptions;
+        this.burpApi = burpApi;
 
         // leave as last call
         this.panel = this.createPanel();
@@ -267,18 +270,24 @@ public class OptionsTab implements ApplicationTab {
 
         // Import single YAML button
         JButton importSingleButton = new JButton("Import Single YAML");
+        importSingleButton.setToolTipText("Import a single YAML file containing regex patterns");
         importSingleButton.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
+            JFileChooser fileChooser = new JFileChooser(lastImportDirectory);
             fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("YAML files", "yaml", "yml"));
             int result = fileChooser.showOpenDialog(panel);
             if (result == JFileChooser.APPROVE_OPTION) {
+                // Remember directory for next time
+                lastImportDirectory = fileChooser.getSelectedFile().getParentFile();
+
                 try {
                     String filepath = fileChooser.getSelectedFile().getAbsolutePath();
+                    int sizeBefore = scannerOptions.getGeneralRegexList().size();
+
                     List<com.tzm.supafinder.model.RegexEntity> duplicates =
                         com.tzm.supafinder.utils.FileUtils.importRegexListFromYAML(
                             filepath, scannerOptions.getGeneralRegexList());
 
-                    int imported = 1 - duplicates.size();
+                    int imported = scannerOptions.getGeneralRegexList().size() - sizeBefore;
                     if (imported > 0) {
                         yamlPatternsCount += imported;
                     }
@@ -286,13 +295,35 @@ public class OptionsTab implements ApplicationTab {
                     updateGlobalRegexCounter();
                     // Refresh the regex list panels
                     generalListPanel.refresh();
-                    String message = imported > 0 ?
-                        "Successfully imported " + imported + " pattern" :
-                        "Pattern already exists (duplicate)";
+
+                    String message;
+                    if (imported > 0) {
+                        message = "Successfully imported 1 pattern from YAML";
+                    } else if (!duplicates.isEmpty()) {
+                        message = "Pattern already exists (duplicate)";
+                    } else {
+                        message = "No patterns found in YAML file";
+                    }
                     JOptionPane.showMessageDialog(panel, message, "YAML Import", JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(panel, "Error importing YAML: " + ex.getMessage(),
-                        "Import Error", JOptionPane.ERROR_MESSAGE);
+                    // Log detailed error to Burp error console
+                    burpApi.logging().logToError("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                    burpApi.logging().logToError("Failed to import single YAML file: " + fileChooser.getSelectedFile().getAbsolutePath());
+                    burpApi.logging().logToError("Description: " + (ex.getMessage() != null ? ex.getMessage() : "No message"));
+                    burpApi.logging().logToError("Exception type: " + ex.getClass().getName());
+                    if (ex.getCause() != null) {
+                        burpApi.logging().logToError("Cause: " + ex.getCause().getMessage());
+                        burpApi.logging().logToError(ex.getCause());
+                    } else {
+                        burpApi.logging().logToError(ex);
+                    }
+                    burpApi.logging().logToError("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+                    // Simple error message in popup
+                    String errorMsg = "Failed to import YAML file.\n\n" +
+                        "File: " + fileChooser.getSelectedFile().getName() + "\n\n" +
+                        "💡 Check the Error Log tab for detailed information.";
+                    JOptionPane.showMessageDialog(panel, errorMsg, "Import Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -305,11 +336,15 @@ public class OptionsTab implements ApplicationTab {
 
         // Import folder button
         JButton importFolderButton = new JButton("Import YAML Folder");
+        importFolderButton.setToolTipText("Recursively import all YAML files from a folder and its subfolders");
         importFolderButton.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
+            JFileChooser fileChooser = new JFileChooser(lastImportDirectory);
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             int result = fileChooser.showOpenDialog(panel);
             if (result == JFileChooser.APPROVE_OPTION) {
+                // Remember directory for next time
+                lastImportDirectory = fileChooser.getSelectedFile();
+
                 String dirpath = fileChooser.getSelectedFile().getAbsolutePath();
 
                 // Create progress dialog
@@ -331,8 +366,15 @@ public class OptionsTab implements ApplicationTab {
                 progressBar.setString("0%");
                 progressPanel.add(progressBar, BorderLayout.CENTER);
 
+                JPanel bottomPanel = new JPanel(new BorderLayout());
                 JLabel detailsLabel = new JLabel(" ");
-                progressPanel.add(detailsLabel, BorderLayout.SOUTH);
+                bottomPanel.add(detailsLabel, BorderLayout.CENTER);
+
+                JButton cancelButton = new JButton("Cancel");
+                cancelButton.setPreferredSize(new java.awt.Dimension(80, 25));
+                bottomPanel.add(cancelButton, BorderLayout.EAST);
+
+                progressPanel.add(bottomPanel, BorderLayout.SOUTH);
 
                 progressDialog.add(progressPanel);
 
@@ -350,7 +392,10 @@ public class OptionsTab implements ApplicationTab {
                         int totalFiles = yamlFilesList.size();
 
                         if (totalFiles == 0) {
-                            return new ImportResult(0, 0, "No YAML files found");
+                            return new ImportResult(0, 0,
+                                "No YAML files found in the selected folder.\n\n" +
+                                "Tip: The search is recursive, so it will look in all subfolders.\n" +
+                                "Make sure the folder contains files with .yaml or .yml extensions.");
                         }
 
                         java.io.File[] yamlFiles = yamlFilesList.toArray(new java.io.File[0]);
@@ -367,7 +412,12 @@ public class OptionsTab implements ApplicationTab {
                         for (java.io.File file : yamlFiles) {
                             // Check if cancelled
                             if (isCancelled()) {
-                                return new ImportResult(0, 0, "Import cancelled by user");
+                                int alreadyImported = scannerOptions.getGeneralRegexList().size() - sizeBefore;
+                                String cancelMsg = "Import was cancelled by user.";
+                                if (alreadyImported > 0) {
+                                    cancelMsg += "\n\n" + alreadyImported + " pattern(s) were imported before cancellation.";
+                                }
+                                return new ImportResult(alreadyImported, allDuplicates.size(), cancelMsg, errorFiles, totalFiles);
                             }
 
                             filesProcessed++;
@@ -390,10 +440,21 @@ public class OptionsTab implements ApplicationTab {
                                     totalPatternsLoaded + " patterns loaded"
                                 ));
                             } catch (Exception ex) {
-                                // Track files that failed to import
-                                String errorMsg = file.getName() + ": " +
-                                    (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
-                                errorFiles.add(errorMsg);
+                                // Track files that failed to import (simple filename only for popup)
+                                errorFiles.add(file.getName());
+
+                                // Log detailed error to Burp error console
+                                burpApi.logging().logToError("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                                burpApi.logging().logToError("Failed to import YAML file: " + file.getAbsolutePath());
+                                burpApi.logging().logToError("Description: " + (ex.getMessage() != null ? ex.getMessage() : "No message"));
+                                burpApi.logging().logToError("Exception type: " + ex.getClass().getName());
+                                if (ex.getCause() != null) {
+                                    burpApi.logging().logToError("Cause: " + ex.getCause().getMessage());
+                                    burpApi.logging().logToError(ex.getCause());
+                                } else {
+                                    burpApi.logging().logToError(ex);
+                                }
+                                burpApi.logging().logToError("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
                                 publish(new ProgressUpdate(
                                     progress,
@@ -405,7 +466,7 @@ public class OptionsTab implements ApplicationTab {
                         }
 
                         int imported = scannerOptions.getGeneralRegexList().size() - sizeBefore;
-                        return new ImportResult(imported, allDuplicates.size(), null, errorFiles);
+                        return new ImportResult(imported, allDuplicates.size(), null, errorFiles, totalFiles);
                     }
 
                     @Override
@@ -436,21 +497,26 @@ public class OptionsTab implements ApplicationTab {
                             generalListPanel.refresh();
 
                             StringBuilder message = new StringBuilder();
-                            message.append("Successfully imported ").append(result.imported).append(" pattern(s)");
+                            message.append("✅ Import Complete\n\n");
+                            message.append("📊 Statistics:\n");
+                            message.append("  • Files processed: ").append(result.totalFiles).append("\n");
+                            message.append("  • Patterns imported: ").append(result.imported).append("\n");
                             if (result.duplicates > 0) {
-                                message.append(" (").append(result.duplicates).append(" duplicates skipped)");
+                                message.append("  • Duplicates skipped: ").append(result.duplicates).append("\n");
                             }
 
                             // Show errors if any
                             if (result.errorFiles != null && !result.errorFiles.isEmpty()) {
-                                message.append("\n\nErrors in ").append(result.errorFiles.size()).append(" file(s):\n");
-                                int maxErrors = Math.min(10, result.errorFiles.size());
+                                message.append("  • Files with errors: ").append(result.errorFiles.size()).append("\n");
+                                message.append("\n⚠️ Files that failed to import:\n");
+                                int maxErrors = Math.min(15, result.errorFiles.size());
                                 for (int i = 0; i < maxErrors; i++) {
-                                    message.append("- ").append(result.errorFiles.get(i)).append("\n");
+                                    message.append("  • ").append(result.errorFiles.get(i)).append("\n");
                                 }
                                 if (result.errorFiles.size() > maxErrors) {
-                                    message.append("... and ").append(result.errorFiles.size() - maxErrors).append(" more");
+                                    message.append("  ... and ").append(result.errorFiles.size() - maxErrors).append(" more\n");
                                 }
+                                message.append("\n💡 Check the Error Log tab for detailed error information and stack traces.");
                                 JOptionPane.showMessageDialog(panel, message.toString(), "YAML Folder Import (with errors)", JOptionPane.WARNING_MESSAGE);
                             } else {
                                 JOptionPane.showMessageDialog(panel, message.toString(), "YAML Folder Import", JOptionPane.INFORMATION_MESSAGE);
@@ -470,6 +536,15 @@ public class OptionsTab implements ApplicationTab {
                         }
                     }
                 };
+
+                // Connect cancel button to worker
+                cancelButton.addActionListener(ev -> {
+                    if (!worker.isDone()) {
+                        worker.cancel(true);
+                        cancelButton.setEnabled(false);
+                        cancelButton.setText("Cancelling...");
+                    }
+                });
 
                 worker.execute();
                 progressDialog.setVisible(true);
@@ -545,6 +620,7 @@ public class OptionsTab implements ApplicationTab {
 
         // Browse button
         JButton browseButton = new JButton("Browse...");
+        browseButton.setToolTipText("Select a folder to watch for YAML file changes");
         browseButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -569,6 +645,7 @@ public class OptionsTab implements ApplicationTab {
         JPanel autoWatchPanel = new JPanel(new GridBagLayout());
 
         JCheckBox autoWatchCheckbox = new JCheckBox("Enable Auto-watch");
+        autoWatchCheckbox.setToolTipText("Automatically reload YAML files when they change in the watched folder");
         autoWatchCheckbox.setSelected(scannerOptions.isYamlAutoWatchEnabled());
         autoWatchCheckbox.addActionListener(e -> {
             scannerOptions.setYamlAutoWatchEnabled(autoWatchCheckbox.isSelected());
@@ -1004,12 +1081,14 @@ public class OptionsTab implements ApplicationTab {
         final int duplicates;
         final String error;
         final List<String> errorFiles;
+        final int totalFiles;
 
         ImportResult(int imported, int duplicates, String error) {
             this.imported = imported;
             this.duplicates = duplicates;
             this.error = error;
             this.errorFiles = new ArrayList<>();
+            this.totalFiles = 0;
         }
 
         ImportResult(int imported, int duplicates, String error, List<String> errorFiles) {
@@ -1017,6 +1096,15 @@ public class OptionsTab implements ApplicationTab {
             this.duplicates = duplicates;
             this.error = error;
             this.errorFiles = errorFiles != null ? errorFiles : new ArrayList<>();
+            this.totalFiles = 0;
+        }
+
+        ImportResult(int imported, int duplicates, String error, List<String> errorFiles, int totalFiles) {
+            this.imported = imported;
+            this.duplicates = duplicates;
+            this.error = error;
+            this.errorFiles = errorFiles != null ? errorFiles : new ArrayList<>();
+            this.totalFiles = totalFiles;
         }
     }
 }

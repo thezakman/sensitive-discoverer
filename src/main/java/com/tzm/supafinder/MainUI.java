@@ -67,7 +67,7 @@ public class MainUI {
         mainPanel = new JTabbedPane();
         loggerTab = new LoggerTab(this);
         mainPanel.addTab(loggerTab.getTabName(), loggerTab.getPanel());
-        ApplicationTab optionsTab = new OptionsTab(this.getScannerOptions());
+        ApplicationTab optionsTab = new OptionsTab(this.getScannerOptions(), this.burpApi);
         mainPanel.addTab(optionsTab.getTabName(), optionsTab.getPanel());
         ApplicationTab aboutTab = new AboutTab();
         mainPanel.addTab(aboutTab.getTabName(), aboutTab.getPanel());

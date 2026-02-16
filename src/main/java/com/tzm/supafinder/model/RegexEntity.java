@@ -80,14 +80,23 @@ public class RegexEntity {
 
         // Compile regex with case sensitivity option
         int flags = caseInsensitive ? Pattern.CASE_INSENSITIVE : 0;
-        this.regexCompiled = Pattern.compile(regex, flags);
+
+        try {
+            this.regexCompiled = Pattern.compile(regex, flags);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            throw new IllegalArgumentException("Invalid regex pattern in '" + description + "': " + e.getMessage(), e);
+        }
 
         if (Objects.isNull(refinerRegex) || refinerRegex.isBlank()) {
             this.refinerRegex = null;
             this.refinerRegexCompiled = null;
         } else {
             this.refinerRegex = refinerRegex.endsWith("$") ? refinerRegex : refinerRegex + "$";
-            this.refinerRegexCompiled = Pattern.compile(this.refinerRegex, flags);
+            try {
+                this.refinerRegexCompiled = Pattern.compile(this.refinerRegex, flags);
+            } catch (java.util.regex.PatternSyntaxException e) {
+                throw new IllegalArgumentException("Invalid refiner regex pattern in '" + description + "': " + e.getMessage(), e);
+            }
         }
         this.sections = sections;
         this.tests = tests;
@@ -104,9 +113,20 @@ public class RegexEntity {
 
         // Compile ignore patterns
         if (ignorePatterns != null && !ignorePatterns.isEmpty()) {
-            this.ignoreCompiledPatterns = ignorePatterns.stream()
-                .map(pattern -> Pattern.compile(pattern, flags))
-                .toList();
+            try {
+                this.ignoreCompiledPatterns = ignorePatterns.stream()
+                    .map(pattern -> {
+                        try {
+                            return Pattern.compile(pattern, flags);
+                        } catch (java.util.regex.PatternSyntaxException e) {
+                            throw new IllegalArgumentException("Invalid ignore pattern '" + pattern + "' in '" + description + "': " + e.getMessage(), e);
+                        }
+                    })
+                    .toList();
+            } catch (IllegalArgumentException e) {
+                // Re-throw to preserve the message
+                throw e;
+            }
         } else {
             this.ignoreCompiledPatterns = null;
         }

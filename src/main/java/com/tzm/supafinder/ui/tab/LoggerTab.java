@@ -754,6 +754,7 @@ public class LoggerTab implements ApplicationTab {
         menu.add(itemToJSON);
 
         PopupMenuButton btnExportLogs = new PopupMenuButton(getLocaleString("logger-exportLogs-label"), menu);
+        btnExportLogs.setToolTipText("Export logged findings to CSV or JSON format");
         btnExportLogs.putClientProperty("analysisDependent", "1");
 
         return btnExportLogs;
@@ -761,6 +762,7 @@ public class LoggerTab implements ApplicationTab {
 
     private JButton createClearLogsButton(JScrollPane scrollPaneLogger) {
         JButton btnClearLogs = new JButton(getLocaleString("logger-clearLogs-label"));
+        btnClearLogs.setToolTipText("Clear all logged findings from the table");
         btnClearLogs.addActionListener(e -> {
             int dialog = JOptionPane.showConfirmDialog(
                     null,

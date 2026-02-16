@@ -89,17 +89,14 @@ public class YamlParser {
             ((Number) data.get("importance")).intValue() : 2;
 
         // Extract precheck fields
-        boolean precheckNeeded = data.containsKey("precheck_needed") ?
-            (Boolean) data.get("precheck_needed") : false;
+        boolean precheckNeeded = extractBoolean(data, "precheck_needed", false);
         List<String> prechecks = extractStringList(data.get("prechecks"));
 
         // Extract case_insensitive
-        boolean caseInsensitive = data.containsKey("case_insensitive") ?
-            (Boolean) data.get("case_insensitive") : true;
+        boolean caseInsensitive = extractBoolean(data, "case_insensitive", true);
 
         // Extract stop_first_occurrence
-        boolean stopFirstOccurrence = data.containsKey("stop_first_occurrence") ?
-            (Boolean) data.get("stop_first_occurrence") : false;
+        boolean stopFirstOccurrence = extractBoolean(data, "stop_first_occurrence", false);
 
         // Extract regexes
         List<String> regexes = extractStringList(data.get("regexes"));
@@ -164,5 +161,42 @@ public class YamlParser {
 
         // If it's a single string, wrap it in a list
         return Collections.singletonList(obj.toString());
+    }
+
+    /**
+     * Safely extract a boolean value from YAML data, handling String to Boolean conversion
+     *
+     * @param data Map containing YAML data
+     * @param key Key to extract
+     * @param defaultValue Default value if key is missing
+     * @return Boolean value
+     */
+    private static boolean extractBoolean(Map<String, Object> data, String key, boolean defaultValue) {
+        if (!data.containsKey(key)) {
+            return defaultValue;
+        }
+
+        Object value = data.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+
+        // Handle actual Boolean
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+
+        // Handle String representation ("true", "false", "yes", "no", etc.)
+        if (value instanceof String) {
+            String strValue = ((String) value).toLowerCase().trim();
+            return strValue.equals("true") || strValue.equals("yes") || strValue.equals("1");
+        }
+
+        // Handle Number (0 = false, non-zero = true)
+        if (value instanceof Number) {
+            return ((Number) value).intValue() != 0;
+        }
+
+        return defaultValue;
     }
 }
